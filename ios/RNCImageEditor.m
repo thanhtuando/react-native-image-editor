@@ -47,6 +47,10 @@ RCT_EXPORT_METHOD(cropImage:(NSURLRequest *)imageRequest
     [RCTConvert CGSize:cropData[@"size"]]
   };
 
+  NSURL *url = [imageRequest URL];
+  NSString *urlPath = [url path];
+  NSString *extension = [urlPath pathExtension];
+
   [_bridge.imageLoader loadImageWithURLRequest:imageRequest callback:^(NSError *error, UIImage *image) {
     if (error) {
       errorCallback(error);
@@ -76,7 +80,15 @@ RCT_EXPORT_METHOD(cropImage:(NSURLRequest *)imageRequest
         errorCallback(RCTErrorWithMessage(errorMessage));
         return;
       }
-      successCallback(@[croppedImageTag]);
+      if([extension isEqualToString:@"png"]){
+        imageData = UIImagePNGRepresentation(croppedImage);
+      }
+      else{
+        imageData = UIImageJPEGRepresentation(croppedImage, 1);
+      }
+      NSString *encodedString = [imageData base64Encoding];
+      NSArray *successData = @[croppedImageTag, encodedString]
+      successCallback(@[successData]);
     }];
   }];
 }
