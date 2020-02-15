@@ -21,7 +21,6 @@ import android.os.AsyncTask;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Base64;
-import android.util.Log;
 
 import com.facebook.common.logging.FLog;
 import com.facebook.infer.annotation.Assertions;
@@ -34,6 +33,8 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.common.ReactConstants;
+
+import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -291,10 +292,10 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         cropped.compress(Bitmap.CompressFormat.JPEG,100,baos);
         byte[] b = baos.toByteArray();
-        DataSuccess dataSuccess = new DataSuccess();
-        dataSuccess.uri = Uri.fromFile(tempFile).toString();
-        dataSuccess.base64 = Base64.encodeToString(b, Base64.DEFAULT);
-        mSuccess.invoke(dataSuccess);
+        JSONObject obj = new JSONObject();
+        obj.put("uri", Uri.fromFile(tempFile).toString());
+        obj.put("base64", Base64.encodeToString(b, Base64.DEFAULT));
+        mSuccess.invoke(obj.toString());
       } catch (Exception e) {
         mError.invoke(e.getMessage());
       }
