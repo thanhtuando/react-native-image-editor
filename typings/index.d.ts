@@ -47,7 +47,7 @@ declare class ImageEditor {
   static cropImage: (
     uri: string,
     cropData: ImageCropData,
-    success: (data: Array<String>) => void,
+    success: (data: Object) => void,
     failure: (error: Object) => void,
   ) => void
 }
