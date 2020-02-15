@@ -1,12 +1,11 @@
 # react-native-image-editor
 
-Image Editor Native module for React Native.
+Image Editor Native module for React Native. This module was extracted from React-Native core in the ["Lean Core"](https://github.com/facebook/react-native/issues/23313) process.
 
 [![Build Status][build-badge]][build]
 [![Version][version-badge]][package]
 [![MIT License][license-badge]][license]
 [![PRs Welcome][prs-welcome-badge]][prs-welcome]
-[![Lean Core Badge][lean-core-badge]][lean-core-issue]
 
 ## Getting started
 
@@ -22,25 +21,15 @@ or
 
 `react-native link @react-native-community/image-editor`
 
-## Usage
-
-Start by importing the library:
+## Api reference
 
 ```javascript
-import ImageEditor from "@react-native-community/image-editor";
+  static cropImage(uri, cropData, success, failure)
 ```
 
-### Crop image
+Crop the image specified by the URI param. If URI points to a remote image, it will be downloaded automatically. If the image cannot be loaded/downloaded, the failure callback will be called.
 
-Crop the image specified by the URI param. If URI points to a remote image, it will be downloaded automatically. If the image cannot be loaded/downloaded, the promise will be rejected.
-
-If the cropping process is successful, the resultant cropped image will be stored in the cache path, and the URI returned in the promise will point to the image in the cache path. Remember to delete the cropped image from the cache path when you are done with it.
-
-```javascript
-  ImageEditor.cropImage(uri, cropData).then(url => {
-    console.log("Cropped image uri", url);
-  })
-```
+If the cropping process is successful, the resultant cropped image will be stored in the ImageStore, and the URI returned in the success callback will point to the image in the store. Remember to delete the cropped image from the ImageStore when you are done with it.
 
 ### cropData
 | Property      | Required | Description                                                                                                                |
@@ -70,5 +59,3 @@ For more advanced usage check our [example app](/example/src/App.js).
 [license]: https://opensource.org/licenses/MIT
 [prs-welcome-badge]: https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square
 [prs-welcome]: http://makeapullrequest.com
-[lean-core-badge]: https://img.shields.io/badge/Lean%20Core-Extracted-brightgreen.svg?style=flat-square
-[lean-core-issue]: https://github.com/facebook/react-native/issues/23313

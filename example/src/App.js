@@ -4,23 +4,25 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @format
  * @flow
  */
 
 import React from 'react';
 import {
+  CameraRoll,
   Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableHighlight,
   View,
+  PermissionsAndroid,
   Platform,
 } from 'react-native';
 import ImageEditor from '@react-native-community/image-editor';
 
-const DEFAULT_IMAGE_HEIGHT = 720;
-const DEFAULT_IMAGE_WIDTH = 1080;
+const PAGE_SIZE = 20;
 
 type ImageOffset = {|
   x: number,
@@ -39,7 +41,43 @@ type ImageCropData = {|
   resizeMode?: ?any,
 |};
 
-export default class SquareImageCropper extends React.Component<
+type State = {
+  render: boolean,
+};
+
+export default class PermissionRequestor extends React.Component<{}, State> {
+  state = {
+    render: Platform.OS === 'android' ? false : true,
+  };
+
+  async componentDidMount() {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+        {
+          title: 'ImageEditor example app',
+          message: 'We need access to your images to test the functionality',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        },
+      );
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        this.setState({render: true});
+      }
+    }
+  }
+
+  render() {
+    if (!this.state.render) {
+      return <Text>We need permission to read your images.</Text>;
+    }
+
+    return <SquareImageCropper />;
+  }
+}
+
+class SquareImageCropper extends React.Component<
   $FlowFixMeProps,
   $FlowFixMeState,
 > {
@@ -54,15 +92,33 @@ export default class SquareImageCropper extends React.Component<
     super(props);
     this._isMounted = true;
     this.state = {
-      photo: {
-        uri: `https://source.unsplash.com/2Ts5HnA67k8/${DEFAULT_IMAGE_WIDTH}x${DEFAULT_IMAGE_HEIGHT}`,
-        height: DEFAULT_IMAGE_HEIGHT,
-        width: DEFAULT_IMAGE_WIDTH,
-      },
+      randomPhoto: null,
       measuredSize: null,
       croppedImageURI: null,
       cropError: null,
     };
+    this._fetchRandomPhoto();
+  }
+
+  async _fetchRandomPhoto() {
+    try {
+      const data = await CameraRoll.getPhotos({first: PAGE_SIZE});
+      if (!this._isMounted) {
+        return;
+      }
+      const edges = data.edges;
+      const edge = edges[Math.floor(Math.random() * edges.length)];
+      const randomPhoto = edge && edge.node && edge.node.image;
+      if (randomPhoto) {
+        this.setState({randomPhoto});
+      }
+    } catch (error) {
+      console.warn("Can't get a photo from camera roll", error);
+    }
+  }
+
+  componentWillUnmount() {
+    this._isMounted = false;
   }
 
   render() {
@@ -90,7 +146,7 @@ export default class SquareImageCropper extends React.Component<
   }
 
   _renderImageCropper() {
-    if (!this.state.photo) {
+    if (!this.state.randomPhoto) {
       return <View style={styles.container} />;
     }
     let error = null;
@@ -99,11 +155,9 @@ export default class SquareImageCropper extends React.Component<
     }
     return (
       <View style={styles.container}>
-        <Text style={styles.text} testID={'headerText'}>
-          Drag the image within the square to crop:
-        </Text>
+        <Text>Drag the image within the square to crop:</Text>
         <ImageCropper
-          image={this.state.photo}
+          image={this.state.randomPhoto}
           size={this.state.measuredSize}
           style={[styles.imageCropper, this.state.measuredSize]}
           onTransformDataChange={data => (this._transformData = data)}
@@ -123,7 +177,7 @@ export default class SquareImageCropper extends React.Component<
   _renderCroppedImage() {
     return (
       <View style={styles.container}>
-        <Text style={styles.text}>Here is the cropped image:</Text>
+        <Text>Here is the cropped image:</Text>
         <Image
           source={{uri: this.state.croppedImageURI}}
           style={[styles.imageCropper, this.state.measuredSize]}
@@ -139,26 +193,22 @@ export default class SquareImageCropper extends React.Component<
     );
   }
 
-  async _crop() {
-    try {
-      const croppedImageURI = await ImageEditor.cropImage(
-        this.state.photo.uri,
-        this._transformData,
-      );
-
-      if (croppedImageURI) {
-        this.setState({croppedImageURI});
-      }
-    } catch (cropError) {
-      this.setState({cropError});
-    }
+  _crop() {
+    ImageEditor.cropImage(
+      this.state.randomPhoto.uri,
+      this._transformData,
+      croppedImageURI => this.setState({croppedImageURI}),
+      cropError => this.setState({cropError}),
+    );
   }
 
   _reset() {
     this.setState({
+      randomPhoto: null,
       croppedImageURI: null,
       cropError: null,
     });
+    this._fetchRandomPhoto();
   }
 }
 
@@ -257,11 +307,7 @@ class ImageCropper extends React.Component<$FlowFixMeProps, $FlowFixMeState> {
         showsVerticalScrollIndicator={false}
         style={this.props.style}
         scrollEventThrottle={16}>
-        <Image
-          testID={'testImage'}
-          source={this.props.image}
-          style={this._scaledImageSize}
-        />
+        <Image source={this.props.image} style={this._scaledImageSize} />
       </ScrollView>
     );
   }
@@ -271,7 +317,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignSelf: 'stretch',
-    marginTop: 60,
   },
   imageCropper: {
     alignSelf: 'center',
@@ -290,8 +335,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '500',
-  },
-  text: {
-    color: 'white',
   },
 });

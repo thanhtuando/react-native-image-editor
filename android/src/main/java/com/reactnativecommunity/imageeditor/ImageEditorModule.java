@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 
 import android.annotation.SuppressLint;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -38,8 +37,8 @@ import android.provider.MediaStore;
 import android.text.TextUtils;
 
 import com.facebook.common.logging.FLog;
+import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.GuardedAsyncTask;
-import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -57,10 +56,7 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
   protected static final String NAME = "RNCImageEditor";
 
   private static final List<String> LOCAL_URI_PREFIXES = Arrays.asList(
-          ContentResolver.SCHEME_FILE,
-          ContentResolver.SCHEME_CONTENT,
-          ContentResolver.SCHEME_ANDROID_RESOURCE
-  );
+      "file://", "content://");
 
   private static final String TEMP_FILE_PREFIX = "ReactNative_cropped_image_";
 
@@ -154,23 +150,25 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
   }
 
   /**
-   * Crop an image. If all goes well, the promise will be resolved with the file:// URI of
+   * Crop an image. If all goes well, the success callback will be called with the file:// URI of
    * the new image as the only argument. This is a temporary file - consider using
    * CameraRollManager.saveImageWithTag to save it in the gallery.
    *
-   * @param uri the URI of the image to crop
+   * @param uri the MediaStore URI of the image to crop
    * @param options crop parameters specified as {@code {offset: {x, y}, size: {width, height}}}.
    *        Optionally this also contains  {@code {targetSize: {width, height}}}. If this is
    *        specified, the cropped image will be resized to that size.
    *        All units are in pixels (not DPs).
-   * @param promise Promise to be resolved when the image has been cropped; the only argument that
-   *        is passed to this is the file:// URI of the new image
+   * @param success callback to be invoked when the image has been cropped; the only argument that
+   *        is passed to this callback is the file:// URI of the new image
+   * @param error callback to be invoked when an error occurs (e.g. can't create file etc.)
    */
   @ReactMethod
   public void cropImage(
       String uri,
       ReadableMap options,
-      Promise promise) {
+      final Callback success,
+      final Callback error) {
     ReadableMap offset = options.hasKey("offset") ? options.getMap("offset") : null;
     ReadableMap size = options.hasKey("size") ? options.getMap("size") : null;
     if (offset == null || size == null ||
@@ -189,7 +187,8 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
         (int) offset.getDouble("y"),
         (int) size.getDouble("width"),
         (int) size.getDouble("height"),
-        promise);
+        success,
+        error);
     if (options.hasKey("displaySize")) {
       ReadableMap targetSize = options.getMap("displaySize");
       cropTask.setTargetSize(
@@ -208,7 +207,8 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
     final int mHeight;
     int mTargetWidth = 0;
     int mTargetHeight = 0;
-    final Promise mPromise;
+    final Callback mSuccess;
+    final Callback mError;
 
     private CropTask(
         ReactContext context,
@@ -217,7 +217,8 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
         int y,
         int width,
         int height,
-        Promise promise) {
+        Callback success,
+        Callback error) {
       super(context);
       if (x < 0 || y < 0 || width <= 0 || height <= 0) {
         throw new JSApplicationIllegalArgumentException(String.format(
@@ -229,7 +230,8 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
       mY = y;
       mWidth = width;
       mHeight = height;
-      mPromise = promise;
+      mSuccess = success;
+      mError = error;
     }
 
     public void setTargetSize(int width, int height) {
@@ -282,9 +284,9 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
           copyExif(mContext, Uri.parse(mUri), tempFile);
         }
 
-        mPromise.resolve(Uri.fromFile(tempFile).toString());
+        mSuccess.invoke(Uri.fromFile(tempFile).toString());
       } catch (Exception e) {
-        mPromise.reject(e);
+        mError.invoke(e.getMessage());
       }
     }
 
@@ -363,10 +365,10 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
         }
       }
 
-      int cropX = Math.round(newX / (float) outOptions.inSampleSize);
-      int cropY = Math.round(newY / (float) outOptions.inSampleSize);
-      int cropWidth = Math.round(newWidth / (float) outOptions.inSampleSize);
-      int cropHeight = Math.round(newHeight / (float) outOptions.inSampleSize);
+      int cropX = (int) Math.floor(newX / (float) outOptions.inSampleSize);
+      int cropY = (int) Math.floor(newY / (float) outOptions.inSampleSize);
+      int cropWidth = (int) Math.floor(newWidth / (float) outOptions.inSampleSize);
+      int cropHeight = (int) Math.floor(newHeight / (float) outOptions.inSampleSize);
       float cropScale = scale * outOptions.inSampleSize;
 
       Matrix scaleMatrix = new Matrix();
