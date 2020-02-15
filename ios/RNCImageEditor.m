@@ -90,13 +90,14 @@ RCT_EXPORT_METHOD(cropImage:(NSURLRequest *)imageRequest
 
     NSError *writeError;
     NSString *uri = [RNCImageUtils writeImage:imageData toPath:path error:&writeError];
-      
+    NSString *encodedString = [imageData base64Encoding];
+    
     if (writeError != nil) {
       reject(@(writeError.code).stringValue, writeError.description, writeError);
       return;
     }
       
-    resolve(uri);
+    resolve(uri, encodedString);
   }];
 }
 
