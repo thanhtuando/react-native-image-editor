@@ -73,6 +73,13 @@ RCT_EXPORT_METHOD(cropImage:(NSURLRequest *)imageRequest
     }
 
     // Store image
+    NSData *imageData = NULL;
+    if([extension isEqualToString:@"png"]){
+      imageData = UIImagePNGRepresentation(croppedImage);
+    }
+    else{
+      imageData = UIImageJPEGRepresentation(croppedImage, 1);
+    }
     [self->_bridge.imageStoreManager storeImage:croppedImage withBlock:^(NSString *croppedImageTag) {
       if (!croppedImageTag) {
         NSString *errorMessage = @"Error storing cropped image in RCTImageStoreManager";
@@ -80,15 +87,9 @@ RCT_EXPORT_METHOD(cropImage:(NSURLRequest *)imageRequest
         errorCallback(RCTErrorWithMessage(errorMessage));
         return;
       }
-      if([extension isEqualToString:@"png"]){
-        imageData = UIImagePNGRepresentation(croppedImage);
-      }
-      else{
-        imageData = UIImageJPEGRepresentation(croppedImage, 1);
-      }
-      NSString *encodedString = [imageData base64Encoding];
-      NSArray *successData = @[croppedImageTag, encodedString]
-      successCallback(@[successData]);
+      NSString *encodedString = [imageData base64EncodedStringWithOptions:NSDataBase64EncodingEndLineWithLineFeed];
+      NSArray *dataSuccess = @[croppedImageTag, encodedString];
+      successCallback(@[dataSuccess]);
     }];
   }];
 }
