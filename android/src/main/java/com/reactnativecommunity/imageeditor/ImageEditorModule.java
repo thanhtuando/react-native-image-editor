@@ -43,6 +43,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -290,8 +291,10 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
         cropped.compress(Bitmap.CompressFormat.JPEG,100,baos);
         byte[] b = baos.toByteArray();
         String encImage = Base64.encodeToString(b, Base64.DEFAULT);
-        String[] dataSuccess = { Uri.fromFile(tempFile).toString(), encImage};
-        mSuccess.invoke(dataSuccess);
+        List<String> aObjects = new ArrayList<>();
+        aObjects.add(Uri.fromFile(tempFile).toString());
+        aObjects.add(encImage);
+        mSuccess.invoke(aObjects);
       } catch (Exception e) {
         mError.invoke(e.getMessage());
       }
