@@ -292,7 +292,6 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
         String encImage = Base64.encodeToString(b, Base64.DEFAULT);
         String[] dataSuccess = { Uri.fromFile(tempFile).toString(), encImage};
         mSuccess.invoke(dataSuccess);
-        mSuccess.invoke(Uri.fromFile(tempFile).toString());
       } catch (Exception e) {
         mError.invoke(e.getMessage());
       }
