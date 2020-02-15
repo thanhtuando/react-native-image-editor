@@ -21,6 +21,7 @@ import android.os.AsyncTask;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Base64;
+import android.util.Log;
 
 import com.facebook.common.logging.FLog;
 import com.facebook.infer.annotation.Assertions;
@@ -53,6 +54,7 @@ import javax.annotation.Nullable;
 /**
  * Native module that provides image cropping functionality.
  */
+
 public class ImageEditorModule extends ReactContextBaseJavaModule {
 
   protected static final String NAME = "RNCImageEditor";
@@ -289,10 +291,10 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         cropped.compress(Bitmap.CompressFormat.JPEG,100,baos);
         byte[] b = baos.toByteArray();
-        String encImage = Base64.encodeToString(b, Base64.DEFAULT);
-        String uri = Uri.fromFile(tempFile).toString();
-        String []objects = {uri, encImage};
-        mSuccess.invoke(objects);
+        DataSuccess dataSuccess = new DataSuccess();
+        dataSuccess.uri = Uri.fromFile(tempFile).toString();
+        dataSuccess.base64 = Base64.encodeToString(b, Base64.DEFAULT);
+        mSuccess.invoke(dataSuccess);
       } catch (Exception e) {
         mError.invoke(e.getMessage());
       }
