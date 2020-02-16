@@ -47,6 +47,10 @@ RCT_EXPORT_METHOD(cropImage:(NSURLRequest *)imageRequest
     [RCTConvert CGSize:cropData[@"size"]]
   };
 
+  NSURL *url = [imageRequest URL];
+  NSString *urlPath = [url path];
+  NSString *extension = [urlPath pathExtension];
+
   [_bridge.imageLoader loadImageWithURLRequest:imageRequest callback:^(NSError *error, UIImage *image) {
     if (error) {
       errorCallback(error);
@@ -69,6 +73,13 @@ RCT_EXPORT_METHOD(cropImage:(NSURLRequest *)imageRequest
     }
 
     // Store image
+    NSData *imageData = NULL;
+    if([extension isEqualToString:@"png"]){
+      imageData = UIImagePNGRepresentation(croppedImage);
+    }
+    else{
+      imageData = UIImageJPEGRepresentation(croppedImage, 1);
+    }
     [self->_bridge.imageStoreManager storeImage:croppedImage withBlock:^(NSString *croppedImageTag) {
       if (!croppedImageTag) {
         NSString *errorMessage = @"Error storing cropped image in RCTImageStoreManager";
@@ -76,7 +87,17 @@ RCT_EXPORT_METHOD(cropImage:(NSURLRequest *)imageRequest
         errorCallback(RCTErrorWithMessage(errorMessage));
         return;
       }
-      successCallback(@[croppedImageTag]);
+      NSString *encodedString = [imageData base64EncodedStringWithOptions:NSDataBase64EncodingEndLineWithLineFeed];
+      NSDictionary *dict = @{@"uri" : croppedImageTag, @"base64" : encodedString};
+      NSError * err;
+      NSData * jsonData = [NSJSONSerialization dataWithJSONObject:dict options:0 error:&err];
+      if (!jsonData) {
+          NSString *errorMessage = @"Error storing cropped image in RCTImageStoreManager";
+          errorCallback(RCTErrorWithMessage(errorMessage));
+      } else {
+          NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+          successCallback(@[jsonString]);
+      }
     }];
   }];
 }

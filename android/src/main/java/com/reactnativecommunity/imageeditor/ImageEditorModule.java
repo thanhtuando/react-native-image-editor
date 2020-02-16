@@ -7,8 +7,36 @@
 
 package com.reactnativecommunity.imageeditor;
 
-import javax.annotation.Nullable;
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.BitmapRegionDecoder;
+import android.graphics.Matrix;
+import android.graphics.Rect;
+import android.media.ExifInterface;
+import android.net.Uri;
+import android.os.AsyncTask;
+import android.provider.MediaStore;
+import android.text.TextUtils;
+import android.util.Base64;
 
+import com.facebook.common.logging.FLog;
+import com.facebook.infer.annotation.Assertions;
+import com.facebook.react.bridge.Callback;
+import com.facebook.react.bridge.GuardedAsyncTask;
+import com.facebook.react.bridge.JSApplicationIllegalArgumentException;
+import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReactContext;
+import com.facebook.react.bridge.ReactContextBaseJavaModule;
+import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.common.ReactConstants;
+
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
@@ -22,35 +50,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapRegionDecoder;
-import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
-import android.graphics.Rect;
-import android.media.ExifInterface;
-import android.net.Uri;
-import android.os.AsyncTask;
-import android.provider.MediaStore;
-import android.text.TextUtils;
-
-import com.facebook.common.logging.FLog;
-import com.facebook.react.bridge.Callback;
-import com.facebook.react.bridge.GuardedAsyncTask;
-import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReactContext;
-import com.facebook.react.bridge.ReactContextBaseJavaModule;
-import com.facebook.react.bridge.ReactMethod;
-import com.facebook.react.bridge.JSApplicationIllegalArgumentException;
-import com.facebook.react.bridge.ReadableMap;
-import com.facebook.infer.annotation.Assertions;
-import com.facebook.react.common.ReactConstants;
+import javax.annotation.Nullable;
 
 /**
  * Native module that provides image cropping functionality.
  */
+
 public class ImageEditorModule extends ReactContextBaseJavaModule {
 
   protected static final String NAME = "RNCImageEditor";
@@ -284,7 +289,13 @@ public class ImageEditorModule extends ReactContextBaseJavaModule {
           copyExif(mContext, Uri.parse(mUri), tempFile);
         }
 
-        mSuccess.invoke(Uri.fromFile(tempFile).toString());
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        cropped.compress(Bitmap.CompressFormat.JPEG,100,baos);
+        byte[] b = baos.toByteArray();
+        JSONObject obj = new JSONObject();
+        obj.put("uri", Uri.fromFile(tempFile).toString());
+        obj.put("base64", Base64.encodeToString(b, Base64.DEFAULT));
+        mSuccess.invoke(obj.toString());
       } catch (Exception e) {
         mError.invoke(e.getMessage());
       }
